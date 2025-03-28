@@ -90,6 +90,7 @@ export default function Home() {
       <div className="text-center mb-4">
         <p>Problem {currentProblemIndex + 1} of {problems.length}</p>
         <p>{currentProblem.first}</p>
+        <p>{currentProblem.type}</p>
         <div className="mt-4 text-sm text-gray-600">
           <p>Completed: {getCompletedPuzzleCount()} puzzles</p>
           <p>Overall Success Rate: {getSuccessRate().toFixed(1)}%</p>
