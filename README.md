@@ -1,6 +1,8 @@
 # Chess Puzzles
 
-A Next.js app that displays chess puzzles and tracks a user's progress.
+A Next.js app that displays chess puzzles from Chess: 533 Problems, Combinations, and games by László Polgár and tracks a user's progress.
+
+Special thanks to 
 
 ## Features
 

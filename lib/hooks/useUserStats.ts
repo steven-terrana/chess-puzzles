@@ -10,12 +10,14 @@ interface UserStats {
   puzzles: Record<string, PuzzleStats>;  // Map of puzzle ID to its stats
   totalAttempts: number;
   successfulAttempts: number;
+  currentStreak: number;
 }
 
 const DEFAULT_STATS: UserStats = {
   puzzles: {},
   totalAttempts: 0,
   successfulAttempts: 0,
+  currentStreak: 0,
 };
 
 export function useUserStats() {
@@ -32,6 +34,7 @@ export function useUserStats() {
           puzzles: parsed.puzzles || {},
           totalAttempts: parsed.totalAttempts || 0,
           successfulAttempts: parsed.successfulAttempts || 0,
+          currentStreak: parsed.currentStreak || 0,
         });
       }
     } catch (error) {
@@ -61,6 +64,7 @@ export function useUserStats() {
         ...prevStats,
         totalAttempts: prevStats.totalAttempts + 1,
         successfulAttempts: isSuccess ? prevStats.successfulAttempts + 1 : prevStats.successfulAttempts,
+        currentStreak: isSuccess ? prevStats.currentStreak + 1 : 0,
         puzzles: {
           ...prevStats.puzzles,
           [puzzleId]: {

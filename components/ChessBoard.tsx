@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Chess } from 'chess.js';
+import { Chess, Square } from 'chess.js';
 import { Chessboard } from 'react-chessboard';
 import { Button } from '@/components/ui/button';
 
@@ -16,15 +16,21 @@ export function ChessBoard({ fen, moves, onCorrectMove, onIncorrectMove, onPuzzl
   const [game, setGame] = useState(new Chess(fen));
   const [currentMoveIndex, setCurrentMoveIndex] = useState(0);
   const [isPuzzleComplete, setIsPuzzleComplete] = useState(false);
+  const [showError, setShowError] = useState(false);
   const [pendingMove, setPendingMove] = useState<{ from: string; to: string } | null>(null);
 
   // Reset the board when the puzzle changes
   useEffect(() => {
+    resetPuzzle();
+  }, [fen]);
+
+  const resetPuzzle = () => {
     setGame(new Chess(fen));
     setCurrentMoveIndex(0);
     setIsPuzzleComplete(false);
+    setShowError(false);
     setPendingMove(null);
-  }, [fen]);
+  };
 
   // Split moves by semicolon to get individual moves
   const currentPuzzleMoves = moves.split(';');
@@ -67,6 +73,7 @@ export function ChessBoard({ fen, moves, onCorrectMove, onIncorrectMove, onPuzzl
           }
         } else {
           onIncorrectMove();
+          setShowError(true);
           // Reset the move
           setGame(new Chess(fen));
         }
@@ -76,7 +83,7 @@ export function ChessBoard({ fen, moves, onCorrectMove, onIncorrectMove, onPuzzl
     }
   }
 
-  function onDrop(sourceSquare: string, targetSquare: string, piece: string) {
+  function onDrop(sourceSquare: Square, targetSquare: Square, piece: string) {
     console.log('on drop:', sourceSquare, targetSquare, piece)
 
     const previous_piece = game.get(sourceSquare);
@@ -100,12 +107,26 @@ export function ChessBoard({ fen, moves, onCorrectMove, onIncorrectMove, onPuzzl
           position={game.fen()} 
           onPieceDrop={onDrop}
           boardWidth={600}
+          customBoardStyle={{
+            borderRadius: '4px',
+            boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)'
+          }}
+          customDarkSquareStyle={{ backgroundColor: '#B58863' }}
+          customLightSquareStyle={{ backgroundColor: '#F0D9B5' }}
         />
         {isPuzzleComplete && (
           <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
             <div className="bg-white p-6 rounded-lg shadow-lg text-center">
-              <h2 className="text-xl font-bold mb-4">Puzzle Complete!</h2>
+              <h2 className="text-xl font-bold mb-4">Puzzle Complete! 🎉</h2>
               <Button onClick={onNextPuzzle}>Next Puzzle</Button>
+            </div>
+          </div>
+        )}
+        {showError && (
+          <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+            <div className="bg-white p-6 rounded-lg shadow-lg text-center">
+              <h2 className="text-xl font-bold mb-4">Incorrect Move</h2>
+              <Button onClick={() => setShowError(false)}>Try Again</Button>
             </div>
           </div>
         )}

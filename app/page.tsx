@@ -3,9 +3,12 @@
 import { useState, useEffect } from 'react';
 import { ChessBoard } from '@/components/ChessBoard';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { toast } from 'sonner';
 import { useUserStats } from '@/lib/hooks/useUserStats';
 import { useTimer } from '@/lib/hooks/useTimer';
+import { Chessboard } from 'react-chessboard';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 // Represents a single chess problem
 interface ChessProblem {
@@ -13,13 +16,22 @@ interface ChessProblem {
   fen: string; // The starting position of the board
   moves: string; // The expected moves to solve the puzzle
   first: string; // The first move of the puzzle
+  type: string;
 }
 
 export default function Home() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  
   // State variables
   const [problems, setProblems] = useState<ChessProblem[]>([]); // All the chess problems
   const [currentProblemIndex, setCurrentProblemIndex] = useState(() => {
-    // If the user has previously visited the page, load the last puzzle they were on
+    const puzzleParam = searchParams.get('puzzle');
+    if (puzzleParam) {
+      const index = parseInt(puzzleParam) - 1;
+      return index >= 0 ? index : 0;
+    }
+    // If no URL param, check localStorage
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('currentPuzzleIndex');
       return saved ? parseInt(saved, 10) : 0;
@@ -27,9 +39,10 @@ export default function Home() {
     return 0;
   });
   const [isLoading, setIsLoading] = useState(true); // Whether or not the page is loading
-  const { stats, recordPuzzleAttempt, isPuzzleCompleted, getPuzzleStats, getSuccessRate, getCompletedPuzzleCount } = useUserStats();
+  const [isEditingPuzzleNumber, setIsEditingPuzzleNumber] = useState(false);
+  const { recordPuzzleAttempt, stats } = useUserStats();
   const currentProblem = problems[currentProblemIndex];
-  const { formatTime, getCurrentPuzzleTime, getTotalTime, markPuzzleComplete } = useTimer(
+  const { markPuzzleComplete } = useTimer(
     currentProblem?.problemid || null // The ID of the current puzzle
   );
 
@@ -59,6 +72,13 @@ export default function Home() {
     }
   }, [currentProblemIndex]);
 
+  // Update URL when puzzle changes
+  useEffect(() => {
+    const newParams = new URLSearchParams(searchParams);
+    newParams.set('puzzle', (currentProblemIndex + 1).toString());
+    router.push(`/?${newParams.toString()}`);
+  }, [currentProblemIndex, router]);
+
   const handleNextProblem = () => {
     // Go to the next puzzle if there is one
     if (currentProblemIndex < problems.length - 1) {
@@ -84,71 +104,63 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen p-8 flex flex-col items-center gap-8">
-      <h1 className="text-2xl font-bold">Chess Puzzles</h1>
-      
-      <div className="text-center mb-4">
-        <p>Problem {currentProblemIndex + 1} of {problems.length}</p>
-        <p>{currentProblem.first}</p>
-        <p>{currentProblem.type}</p>
-        <div className="mt-4 text-sm text-gray-600">
-          <p>Completed: {getCompletedPuzzleCount()} puzzles</p>
-          <p>Overall Success Rate: {getSuccessRate().toFixed(1)}%</p>
-          <p>Total Attempts: {stats.totalAttempts}</p>
-          <p>Total Time: {formatTime(getTotalTime())}</p>
-          
-          <div className="mt-2 p-2 bg-gray-50 rounded-md">
-            <p className="font-medium text-gray-700">Current Puzzle Stats:</p>
-            {currentProblem && (
-              <>
-                <p>Time Spent: {formatTime(getCurrentPuzzleTime())}</p>
-                <p>Attempts: {getPuzzleStats(currentProblem.problemid)?.attempts || 0}</p>
-                <p>Success Rate: {(() => {
-                  const stats = getPuzzleStats(currentProblem.problemid);
-                  if (!stats || !stats.attempts) return '0.0';
-                  return ((stats.successfulAttempts / stats.attempts) * 100).toFixed(1);
-                })()}%</p>
-                {isPuzzleCompleted(currentProblem.problemid) && (
-                  <p className="text-green-600 font-medium">✓ Completed</p>
-                )}
-              </>
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100">
+      <Card className="w-full max-w-3xl">
+        <CardHeader>
+          <CardTitle>
+            {isEditingPuzzleNumber ? (
+              <input
+                type="number"
+                className="w-24 text-xl font-bold text-center border rounded"
+                value={currentProblemIndex + 1}
+                min={1}
+                max={problems.length}
+                onChange={(e) => {
+                  const newIndex = Math.min(Math.max(parseInt(e.target.value) - 1, 0), problems.length - 1);
+                  setCurrentProblemIndex(newIndex);
+                }}
+                onBlur={() => setIsEditingPuzzleNumber(false)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    setIsEditingPuzzleNumber(false);
+                  }
+                }}
+                autoFocus
+              />
+            ) : (
+              <span 
+                onDoubleClick={() => setIsEditingPuzzleNumber(true)}
+                className="cursor-pointer hover:opacity-80"
+                title="Double click to change puzzle number"
+              >
+                Chess Puzzle #{currentProblemIndex + 1}
+                <p className="text-sm text-gray-500">{currentProblem.type}</p>
+              </span>
             )}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="mb-4">
+          <ChessBoard
+            fen={currentProblem.fen}
+            moves={currentProblem.moves}
+            onCorrectMove={() => {
+              recordPuzzleAttempt(currentProblem.problemid, true);
+            }}
+            onIncorrectMove={() => {
+              recordPuzzleAttempt(currentProblem.problemid, false);
+            }}
+            onPuzzleComplete={() => {
+              markPuzzleComplete(currentProblem.problemid);
+            }}
+            onNextPuzzle={handleNextProblem}
+          />
           </div>
-        </div>
-      </div>
-
-      <ChessBoard
-        fen={currentProblem.fen}
-        moves={currentProblem.moves}
-        onCorrectMove={() => {
-          toast.success('Correct move!');
-          recordPuzzleAttempt(currentProblem.problemid, true);
-        }}
-        onIncorrectMove={() => {
-          toast.error('Incorrect move. Try again.');
-          recordPuzzleAttempt(currentProblem.problemid, false);
-        }}
-        onPuzzleComplete={() => {
-          toast.success('Puzzle completed! 🎉');
-          markPuzzleComplete(currentProblem.problemid);
-        }}
-        onNextPuzzle={handleNextProblem}
-      />
-
-      <div className="flex gap-4">
-        <Button
-          onClick={handlePreviousProblem}
-          disabled={currentProblemIndex === 0}
-        >
-          Previous
-        </Button>
-        <Button
-          onClick={handleNextProblem}
-          disabled={currentProblemIndex === problems.length - 1}
-        >
-          Next
-        </Button>
-      </div>
+          <div className="text-center">
+            <p className="text-xl font-semibold">Current Streak: {stats.currentStreak}</p>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
