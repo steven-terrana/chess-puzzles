@@ -104,9 +104,24 @@ export default function Home() {
   }
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100">
-      <Card className="w-full max-w-3xl">
-        <CardHeader>
+    <div className="p-8">
+      <Card className="w-full max-w-3xl mx-auto">
+        <CardHeader className="relative">
+          <div className="absolute right-4 top-4">
+            <a 
+              href={`https://www.chess.com/analysis?fen=${encodeURIComponent(currentProblem.fen)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-gray-500 hover:text-gray-700"
+              title="Analyze on Chess.com"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                <polyline points="15 3 21 3 21 9"></polyline>
+                <line x1="10" y1="14" x2="21" y2="3"></line>
+              </svg>
+            </a>
+          </div>
           <CardTitle>
             {isEditingPuzzleNumber ? (
               <input
@@ -140,24 +155,40 @@ export default function Home() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="mb-4">
-          <ChessBoard
-            fen={currentProblem.fen}
-            moves={currentProblem.moves}
-            onCorrectMove={() => {
-              recordPuzzleAttempt(currentProblem.problemid, true);
-            }}
-            onIncorrectMove={() => {
-              recordPuzzleAttempt(currentProblem.problemid, false);
-            }}
-            onPuzzleComplete={() => {
-              markPuzzleComplete(currentProblem.problemid);
-            }}
-            onNextPuzzle={handleNextProblem}
-          />
-          </div>
-          <div className="text-center">
-            <p className="text-xl font-semibold">Current Streak: {stats.currentStreak}</p>
+          <div className="flex flex-col items-center space-y-4">
+            <ChessBoard
+              fen={currentProblem.fen}
+              moves={currentProblem.moves}
+              onCorrectMove={() => {
+                recordPuzzleAttempt(currentProblem.problemid, true);
+              }}
+              onIncorrectMove={() => {
+                recordPuzzleAttempt(currentProblem.problemid, false);
+              }}
+              onPuzzleComplete={() => {
+                markPuzzleComplete(currentProblem.problemid);
+              }}
+              onNextPuzzle={handleNextProblem}
+            />
+            <div className="flex items-center space-x-4">
+              <Button
+                variant="outline"
+                onClick={handlePreviousProblem}
+                disabled={currentProblemIndex === 0}
+              >
+                Previous
+              </Button>
+              <div className="text-center">
+                <p className="text-xl font-semibold">Current Streak: {stats.currentStreak}</p>
+              </div>
+              <Button
+                variant="outline"
+                onClick={handleNextProblem}
+                disabled={currentProblemIndex === problems.length - 1}
+              >
+                Next
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>

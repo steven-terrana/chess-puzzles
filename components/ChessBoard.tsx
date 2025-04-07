@@ -18,6 +18,9 @@ export function ChessBoard({ fen, moves, onCorrectMove, onIncorrectMove, onPuzzl
   const [isPuzzleComplete, setIsPuzzleComplete] = useState(false);
   const [showError, setShowError] = useState(false);
   const [pendingMove, setPendingMove] = useState<{ from: string; to: string } | null>(null);
+  const [highlightedSquares, setHighlightedSquares] = useState<{ [square: string]: { backgroundColor: string } }>({});
+  const [selectedSquare, setSelectedSquare] = useState<Square | null>(null);
+  const [legalMoves, setLegalMoves] = useState<{ [square: string]: { background: string } }>({});
 
   // Reset the board when the puzzle changes
   useEffect(() => {
@@ -30,6 +33,9 @@ export function ChessBoard({ fen, moves, onCorrectMove, onIncorrectMove, onPuzzl
     setIsPuzzleComplete(false);
     setShowError(false);
     setPendingMove(null);
+    setHighlightedSquares({});
+    setSelectedSquare(null);
+    setLegalMoves({});
   };
 
   // Split moves by semicolon to get individual moves
@@ -74,8 +80,9 @@ export function ChessBoard({ fen, moves, onCorrectMove, onIncorrectMove, onPuzzl
         } else {
           onIncorrectMove();
           setShowError(true);
-          // Reset the move
+          // Reset the move and move index
           setGame(new Chess(fen));
+          setCurrentMoveIndex(0);
         }
       }
     } catch (error) {
@@ -100,19 +107,75 @@ export function ChessBoard({ fen, moves, onCorrectMove, onIncorrectMove, onPuzzl
     return true;
   }
 
+  function onSquareRightClick(square: Square) {
+    const newHighlightedSquares = { ...highlightedSquares };
+    if (newHighlightedSquares[square]) {
+      delete newHighlightedSquares[square];
+    } else {
+      newHighlightedSquares[square] = { backgroundColor: "rgba(255, 0, 0, 0.4)" };
+    }
+    setHighlightedSquares(newHighlightedSquares);
+  }
+
+  function onSquareClick(square: Square) {
+    // If a piece is already selected
+    if (selectedSquare) {
+      // If clicking the same square, deselect it
+      if (square === selectedSquare) {
+        setSelectedSquare(null);
+        setLegalMoves({});
+        return;
+      }
+      
+      // If clicking a legal move square, make the move
+      const moves = game.moves({ square: selectedSquare, verbose: true });
+      const isLegalMove = moves.some(move => move.to === square);
+      if (isLegalMove) {
+        onDrop(selectedSquare, square, '');
+        setSelectedSquare(null);
+        setLegalMoves({});
+        return;
+      }
+    }
+
+    // Check if the clicked square has a piece that can move
+    const piece = game.get(square);
+    if (piece && piece.color === game.turn()) {
+      setSelectedSquare(square);
+      const moves = game.moves({ square, verbose: true });
+      const newLegalMoves: { [square: string]: { background: string } } = {};
+      moves.forEach(move => {
+        newLegalMoves[move.to] = {
+          background: 'radial-gradient(circle, rgba(128,128,128,.35) 20%, transparent 20%)'
+        };
+      });
+      setLegalMoves(newLegalMoves);
+    } else {
+      setSelectedSquare(null);
+      setLegalMoves({});
+    }
+  }
+
   return (
     <div className="w-full max-w-[600px] mx-auto">
       <div className="relative">
         <Chessboard 
           position={game.fen()} 
           onPieceDrop={onDrop}
+          onSquareRightClick={onSquareRightClick}
+          onSquareClick={onSquareClick}
+          customSquareStyles={{
+            ...highlightedSquares,
+            ...legalMoves,
+            ...(selectedSquare ? { [selectedSquare]: { backgroundColor: 'rgba(255, 255, 0, 0.4)' } } : {})
+          }}
           boardWidth={600}
+          customDarkSquareStyle={{ backgroundColor: '#769656' }}
+          customLightSquareStyle={{ backgroundColor: '#eeeed2' }}
           customBoardStyle={{
             borderRadius: '4px',
-            boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)'
+            boxShadow: '0 2px 10px rgba(0, 0, 0, 0.5)'
           }}
-          customDarkSquareStyle={{ backgroundColor: '#B58863' }}
-          customLightSquareStyle={{ backgroundColor: '#F0D9B5' }}
         />
         {isPuzzleComplete && (
           <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
