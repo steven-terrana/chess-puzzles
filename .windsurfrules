@@ -1,0 +1,8 @@
+# Coding Guidelines
+- use TypeScript for all new code
+- use Shadcn UI for new components
+
+# Implementation Guidelines
+- always do the minimal amount of work to meet the request
+- do not add extra features or complexity unless explicitly requested
+- ask clarifying questions if there is ambiguity before proceeding

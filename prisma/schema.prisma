@@ -1,0 +1,52 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model Player {
+  id           String    @id
+  username     String    @unique
+  lastSyncTime DateTime?
+  gamesAsWhite Game[]    @relation("WhitePlayer")
+  gamesAsBlack Game[]    @relation("BlackPlayer")
+}
+
+model Game {
+  id          String   @id
+  timeControl String
+  gameMode    String?   // 'bullet', 'blitz', 'rapid', 'daily'...
+  rated       Boolean
+  status      String
+  winner      String?
+  pgn         String
+  endTime     DateTime
+  white       Player   @relation("WhitePlayer", fields: [whiteId], references: [id])
+  whiteId     String
+  black       Player   @relation("BlackPlayer", fields: [blackId], references: [id])
+  blackId     String
+  moves       Move[]
+}
+
+model Move {
+  id         Int      @id @default(autoincrement())
+  gameId     String
+  game       Game     @relation(fields: [gameId], references: [id])
+  moveNumber Int
+  san        String   // Standard Algebraic Notation
+  color      String   // "w" or "b"
+  timeLeft   String?  // Clock time in h:mm:ss.s format
+  timeSpent  Float?   // Time spent in seconds
+
+  @@index([gameId])
+  @@unique([gameId, moveNumber, color])
+}
